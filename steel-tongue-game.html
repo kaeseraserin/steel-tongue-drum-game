@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Steel Tongue Drum Memory Game</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #eef2f3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+  }
+  h1 {
+    margin-bottom: 0.5rem;
+  }
+  #drum-container {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-gap: 15px;
+    margin: 1.5rem 0;
+  }
+  .drum-pad {
+    background: #c4a484;
+    border-radius: 12px;
+    height: 100px;
+    width: 100px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: white;
+    user-select: none;
+    box-shadow: 0 5px #9b7b57;
+    transition: background 0.2s;
+  }
+  .drum-pad:active, .drum-pad.active {
+    background: #8e6d52;
+    box-shadow: 0 2px #5d4a37;
+    transform: translateY(3px);
+  }
+  #start-btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.2rem;
+    background: #a67c52;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 5px #7a5f3a;
+    user-select: none;
+  }
+  #start-btn:active {
+    box-shadow: 0 2px #4f3d22;
+    transform: translateY(3px);
+  }
+  #message {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    height: 1.5rem;
+  }
+  #score {
+    margin-top: 1rem;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+</style>
+</head>
+<body>
+  <h1>Steel Tongue Drum Memory Game</h1>
+  <button id="start-btn">Start Game</button>
+  <div id="drum-container">
+    <div class="drum-pad" data-tone="0">Do</div>
+    <div class="drum-pad" data-tone="1">Re</div>
+    <div class="drum-pad" data-tone="2">Mi</div>
+    <div class="drum-pad" data-tone="3">Fa</div>
+    <div class="drum-pad" data-tone="4">Sol</div>
+    <div class="drum-pad" data-tone="5">La</div>
+  </div>
+  <div id="message"></div>
+  <div id="score"></div>
+
+<script>
+  const tones = [
+    'https://cdn.jsdelivr.net/gh/jbrown/steeltonguedrum-samples/Do.mp3',
+    'https://cdn.jsdelivr.net/gh/jbrown/steeltonguedrum-samples/Re.mp3',
+    'https://cdn.jsdelivr.net/gh/jbrown/steeltonguedrum-samples/Mi.mp3',
+    'https://cdn.jsdelivr.net/gh/jbrown/steeltonguedrum-samples/Fa.mp3',
+    'https://cdn.jsdelivr.net/gh/jbrown/steeltonguedrum-samples/Sol.mp3',
+    'https://cdn.jsdelivr.net/gh/jbrown/steeltonguedrum-samples/La.mp3'
+  ];
+
+  const drumPads = document.querySelectorAll('.drum-pad');
+  const startBtn = document.getElementById('start-btn');
+  const message = document.getElementById('message');
+  const scoreDisplay = document.getElementById('score');
+
+  let sequence = [];
+  let playerSequence = [];
+  let playingSequence = false;
+  let score = 0;
+
+  function playTone(index) {
+    return new Promise((resolve) => {
+      const audio = new Audio(tones[index]);
+      audio.play();
+      const pad = drumPads[index];
+      pad.classList.add('active');
+      audio.onended = () => {
+        pad.classList.remove('active');
+        setTimeout(resolve, 250);
+      };
+    });
+  }
+
+  async function playSequence() {
+    playingSequence = true;
+    message.textContent = 'Listen carefully...';
+    for (const toneIndex of sequence) {
+      await playTone(toneIndex);
+    }
+    playingSequence = false;
+    message.textContent = 'Your turn: repeat the sequence!';
+    playerSequence = [];
+  }
+
+  function nextRound() {
+    score++;
+    scoreDisplay.textContent = `Score: ${score}`;
+    const nextTone = Math.floor(Math.random() * tones.length);
+    sequence.push(nextTone);
+    playSequence();
+  }
+
+  function resetGame() {
+    sequence = [];
+    playerSequence = [];
+    score = 0;
+    scoreDisplay.textContent = '';
+    message.textContent = '';
+  }
+
+  drumPads.forEach((pad) => {
+    pad.addEventListener('click', () => {
+      if (playingSequence || sequence.length === 0) return; // ignore clicks during playback or before start
+      const toneIndex = Number(pad.dataset.tone);
+      playerSequence.push(toneIndex);
+      playTone(toneIndex);
+
+      // Check player's input so far
+      for (let i = 0; i < playerSequence.length; i++) {
+        if (playerSequence[i] !== sequence[i]) {
+          message.textContent = '❌ Wrong! Game over. Click Start to try again.';
+          resetGame();
+          return;
+        }
+      }
+      // If full sequence correct
+      if (playerSequence.length === sequence.length) {
+        message.textContent = '✅ Correct! Get ready for next round.';
+        setTimeout(nextRound, 1000);
+      }
+    });
+  });
+
+  startBtn.addEventListener('click', () => {
+    resetGame();
+    nextRound();
+  });
+</script>
+</body>
+</html>
